@@ -1,142 +1,283 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nuestra Agenda 💖</title>
+<title>Elian & Yhos 💙</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
 <style>
 body{
-  font-family:Segoe UI;
-  background:#f4f4f4;
-  display:flex;
-  justify-content:center;
-  padding:40px;
-}
-.container{
-  background:white;
-  padding:30px;
-  border-radius:20px;
-  width:100%;
-  max-width:500px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
-}
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border-radius:12px;
-  border:1px solid #ddd;
-}
-button{
-  background:#111;
+  margin:0;
+  font-family:Segoe UI, sans-serif;
+  background:linear-gradient(135deg,#0f172a,#1e293b,#111827);
   color:white;
-  border:none;
-  cursor:pointer;
 }
-ul{list-style:none;padding:0;margin-top:20px;}
-li{
-  background:#fafafa;
-  padding:10px;
-  border-radius:12px;
-  margin-bottom:10px;
+
+.wrapper{
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+h1{
+  text-align:center;
+  color:#3b82f6;
+}
+
+.layout{
   display:flex;
-  justify-content:space-between;
+  flex-direction:column;
+  gap:20px;
 }
-.done{
+
+@media(min-width:768px){
+  .layout{
+    flex-direction:row;
+  }
+}
+
+.card{
+  background:#1e293b;
+  padding:20px;
+  border-radius:15px;
+  flex:1;
+  box-shadow:0 0 25px rgba(59,130,246,0.2);
+}
+
+select,input,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:8px;
+}
+
+select,input{
+  background:#334155;
+  color:white;
+}
+
+button{
+  background:#3b82f6;
+  color:white;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover{
+  background:#60a5fa;
+  transform:scale(1.03);
+}
+
+.date-item{
+  background:#334155;
+  padding:8px;
+  border-radius:8px;
+  margin-top:6px;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.date-item.done{
   text-decoration:line-through;
-  opacity:0.5;
+  opacity:0.6;
+}
+
+.counter{
+  margin-top:10px;
+  color:#60a5fa;
+  font-weight:bold;
+}
+
+.notification{
+  margin-top:15px;
+  padding:15px;
+  background:#0f172a;
+  border-left:4px solid #3b82f6;
+  border-radius:8px;
+  display:none;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:15px;
+}
+
+.box{
+  background:#0f172a;
+  padding:20px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:0.3s;
+  text-align:center;
+  font-size:20px;
+}
+
+.box:hover{
+  background:#334155;
 }
 </style>
 </head>
+
 <body>
 
-<div class="container">
-<h2>Nuestra Agenda 💞</h2>
+<div class="wrapper">
+<h1>💙 Elian & Yhos 💙</h1>
 
-<select id="creador">
+<div class="layout">
+
+<div class="card">
+<h2>Crear Cita</h2>
+
+<select id="who">
 <option value="Elian">Elian</option>
-<option value="Ella">Ella</option>
+<option value="Yhos">Yhos</option>
 </select>
 
-<input type="text" id="titulo" placeholder="Plan romántico">
-<input type="date" id="fecha">
+<input type="text" id="title" placeholder="¿Qué plan?">
+<input type="date" id="day">
 
-<button onclick="crearCita()">Crear Cita</button>
+<button onclick="createDate()">Invitar 💌</button>
 
-<ul id="lista"></ul>
+<div class="counter" id="counter"></div>
+<div class="notification" id="notification"></div>
+
+<div id="dates"></div>
+</div>
+
+<div class="card">
+<h2>🎮 Our Game</h2>
+<p style="color:#94a3b8">Se desbloquea al completar 5 citas</p>
+<div id="gameArea"></div>
+</div>
+
+</div>
 </div>
 
 <script>
+(function(){
+emailjs.init("CgdscwW85CxOt9IHB");
+})();
 
-const supabaseUrl = "https://fxctdsqksfsywzxlbdot.supabase.co";
-const supabaseKey = "sb_publishable_tWgEcPLMpHH3Nb7CryqMyw_JWcxbRos";
+let completed = localStorage.getItem("completed") ? parseInt(localStorage.getItem("completed")) : 0;
+let datesData = localStorage.getItem("dates") ? JSON.parse(localStorage.getItem("dates")) : [];
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+updateCounter();
+renderDates();
+checkUnlock();
 
-async function crearCita(){
-  const creador = document.getElementById("creador").value;
-  const titulo = document.getElementById("titulo").value;
-  const fecha = document.getElementById("fecha").value;
+function createDate(){
+  const who=document.getElementById("who").value;
+  const title=document.getElementById("title").value;
+  const day=document.getElementById("day").value;
 
-  if(!titulo || !fecha){
-    alert("Completa los campos");
+  if(!title || !day){
+    alert("Completa todo 💙");
     return;
   }
 
-  await supabase.from("citas").insert([
-    { creador, titulo, fecha }
-  ]);
+  emailjs.send("service_c2msv6j","template_cfn5v8w",{
+    email_subject:"💙 Nueva Invitación",
+    email_title:"💙 Nueva Invitación",
+    email_message: who+" te está invitando a una cita.",
+    date_title:title,
+    date_day:day,
+    total_completed:completed
+  });
 
-  document.getElementById("titulo").value="";
-  cargarCitas();
+  datesData.push({who,title,day,done:false});
+  localStorage.setItem("dates",JSON.stringify(datesData));
+  renderDates();
+
+  document.getElementById("title").value="";
 }
 
-async function cargarCitas(){
-  const { data } = await supabase
-    .from("citas")
-    .select("*")
-    .order("created_at", { ascending:false });
+function renderDates(){
+  const container=document.getElementById("dates");
+  container.innerHTML="";
 
-  const lista = document.getElementById("lista");
-  lista.innerHTML="";
+  datesData.forEach((d,index)=>{
+    const div=document.createElement("div");
+    div.className="date-item";
+    if(d.done) div.classList.add("done");
+    div.innerText=d.who+" → "+d.title+" ("+d.day+")";
 
-  data.forEach(cita=>{
-    const li = document.createElement("li");
-    if(cita.completado) li.classList.add("done");
+    div.onclick=function(){
+      if(!d.done){
+        d.done=true;
+        completed++;
+        localStorage.setItem("completed",completed);
+        localStorage.setItem("dates",JSON.stringify(datesData));
 
-    li.innerHTML = `
-      <span onclick="toggle(${cita.id}, ${cita.completado})">
-        ${cita.titulo} - ${cita.fecha}
-      </span>
-      <button onclick="eliminar(${cita.id})">❌</button>
-    `;
-    lista.appendChild(li);
+        emailjs.send("service_c2msv6j","template_cfn5v8w",{
+          email_subject:"✨ Cita Completada",
+          email_title:"✨ Cita Completada",
+          email_message:d.who+" cumplió la misión. Cita lograda.",
+          date_title:d.title,
+          date_day:d.day,
+          total_completed:completed
+        });
+
+        updateCounter();
+        renderDates();
+        checkUnlock();
+      }
+    }
+
+    container.appendChild(div);
   });
 }
 
-async function toggle(id, estado){
-  await supabase
-    .from("citas")
-    .update({ completado: !estado })
-    .eq("id", id);
-
-  cargarCitas();
+function updateCounter(){
+  document.getElementById("counter").innerText="Citas completadas: "+completed;
 }
 
-async function eliminar(id){
-  await supabase
-    .from("citas")
-    .delete()
-    .eq("id", id);
-
-  cargarCitas();
+function checkUnlock(){
+  if(completed>=5){
+    unlockGame();
+    randomSuggestion();
+  }
 }
 
-cargarCitas();
+function unlockGame(){
+  const game=document.getElementById("gameArea");
+  game.innerHTML="";
+  const winner=Math.floor(Math.random()*9);
 
+  for(let i=0;i<9;i++){
+    const box=document.createElement("div");
+    box.className="box";
+    box.onclick=function(){
+      if(i===winner){
+        this.innerText="💙";
+        alert("Tú eliges la próxima cita 😏");
+      }else{
+        this.innerText="✖";
+      }
+    }
+    game.appendChild(box);
+  }
+}
+
+function randomSuggestion(){
+  const ideas=[
+    "Ir a patinar 🛼",
+    "Noche de pelis 🎬",
+    "Salir por helado 🍦",
+    "Picnic improvisado 🌌",
+    "Competencia de videojuegos 🎮",
+    "Caminata nocturna 🌙"
+  ];
+
+  const random=ideas[Math.floor(Math.random()*ideas.length)];
+  const note=document.getElementById("notification");
+  note.style.display="block";
+  note.innerText="🎁 Plan sugerido automáticamente: "+random;
+}
 </script>
 
 </body>
