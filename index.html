@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuestra Agenda 💖</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+  font-family:Segoe UI;
+  background:#f4f4f4;
+  display:flex;
+  justify-content:center;
+  padding:40px;
+}
+.container{
+  background:white;
+  padding:30px;
+  border-radius:20px;
+  width:100%;
+  max-width:500px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:12px;
+  border:1px solid #ddd;
+}
+button{
+  background:#111;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
+ul{list-style:none;padding:0;margin-top:20px;}
+li{
+  background:#fafafa;
+  padding:10px;
+  border-radius:12px;
+  margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+}
+.done{
+  text-decoration:line-through;
+  opacity:0.5;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Nuestra Agenda 💞</h2>
+
+<select id="creador">
+<option value="Elian">Elian</option>
+<option value="Ella">Ella</option>
+</select>
+
+<input type="text" id="titulo" placeholder="Plan romántico">
+<input type="date" id="fecha">
+
+<button onclick="crearCita()">Crear Cita</button>
+
+<ul id="lista"></ul>
+</div>
+
+<script>
+
+const supabaseUrl = "https://fxctdsqksfsywzxlbdot.supabase.co";
+const supabaseKey = "sb_publishable_tWgEcPLMpHH3Nb7CryqMyw_JWcxbRos";
+
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+async function crearCita(){
+  const creador = document.getElementById("creador").value;
+  const titulo = document.getElementById("titulo").value;
+  const fecha = document.getElementById("fecha").value;
+
+  if(!titulo || !fecha){
+    alert("Completa los campos");
+    return;
+  }
+
+  await supabase.from("citas").insert([
+    { creador, titulo, fecha }
+  ]);
+
+  document.getElementById("titulo").value="";
+  cargarCitas();
+}
+
+async function cargarCitas(){
+  const { data } = await supabase
+    .from("citas")
+    .select("*")
+    .order("created_at", { ascending:false });
+
+  const lista = document.getElementById("lista");
+  lista.innerHTML="";
+
+  data.forEach(cita=>{
+    const li = document.createElement("li");
+    if(cita.completado) li.classList.add("done");
+
+    li.innerHTML = `
+      <span onclick="toggle(${cita.id}, ${cita.completado})">
+        ${cita.titulo} - ${cita.fecha}
+      </span>
+      <button onclick="eliminar(${cita.id})">❌</button>
+    `;
+    lista.appendChild(li);
+  });
+}
+
+async function toggle(id, estado){
+  await supabase
+    .from("citas")
+    .update({ completado: !estado })
+    .eq("id", id);
+
+  cargarCitas();
+}
+
+async function eliminar(id){
+  await supabase
+    .from("citas")
+    .delete()
+    .eq("id", id);
+
+  cargarCitas();
+}
+
+cargarCitas();
+
+</script>
+
+</body>
+</html>
